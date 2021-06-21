@@ -46,6 +46,8 @@ import (
 const (
 	// TopicPrefix is the Kafka Broker topic prefix - (topic name: knative-broker-<broker-namespace>-<broker-name>).
 	TopicPrefix = "knative-broker-"
+	topicAnnotation = "kafka.eventing.knative.dev/broker.topic"
+
 )
 
 type Configs struct {
@@ -123,7 +125,7 @@ func (r *Reconciler) reconcileKind(ctx context.Context, broker *eventing.Broker)
 		return fmt.Errorf("failed to track secret: %w", err)
 	}
 
-	topic, err := r.ClusterAdmin.CreateTopic(logger, kafka.Topic(TopicPrefix, broker), topicConfig, securityOption)
+	topic, err := r.ClusterAdmin.CreateTopic(logger, resolveTopicName(broker), topicConfig, securityOption)
 	if err != nil {
 		return statusConditionManager.FailedToCreateTopic(topic, err)
 	}
@@ -210,6 +212,15 @@ func (r *Reconciler) reconcileKind(ctx context.Context, broker *eventing.Broker)
 	}
 
 	return statusConditionManager.Reconciled()
+}
+
+func resolveTopicName(broker *eventing.Broker) string {
+	topicName := kafka.Topic(TopicPrefix, broker)
+	topicAnnotationValue, ok := broker.Annotations[topicAnnotation]
+	if ok {
+		topicName = topicAnnotationValue
+	}
+	return topicName
 }
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, broker *eventing.Broker) reconciler.Event {
