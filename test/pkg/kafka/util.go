@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	batchv1 "k8s.io/api/batch/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,6 +36,12 @@ func verifyJobSucceeded(
 	tracker *testlib.Tracker,
 	namespacedName types.NamespacedName,
 	job *batchv1.Job) error {
+
+	if _, err := client.BatchV1().Jobs(namespacedName.Namespace).Get(ctx, job.Name, metav1.GetOptions{}); err != nil && apierrors.IsNotFound(err) {
+		if err := client.BatchV1().Jobs(namespacedName.Namespace).Delete(ctx, job.Name, metav1.DeleteOptions{}); err != nil {
+			return fmt.Errorf("failed to delete verify job: %w", err)
+		}
+	}
 
 	job, err := client.BatchV1().Jobs(namespacedName.Namespace).Create(ctx, job, metav1.CreateOptions{})
 	if err != nil {
