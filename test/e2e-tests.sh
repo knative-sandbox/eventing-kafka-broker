@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -Eeo pipefail
+
 # variables used:
 # - SKIP_INITIALIZE (default: false) - skip cluster creation.
 # - LOCAL_DEVELOPMENT (default: false) - skip heavy workloads installation like load and chaos generators.
@@ -48,5 +50,8 @@ go_test_e2e -tags=deletecm ./test/e2e/... || fail_test "E2E (deletecm) suite fai
 if ! ${LOCAL_DEVELOPMENT}; then
   go_test_e2e -tags=sacura -timeout=40m ./test/e2e/... || fail_test "E2E (sacura) suite failed"
 fi
+
+# TODO(pierDipi) remove this once we have a proper job
+SKIP_INITIALIZE=true $(dirname $0)/e2e-upgrade-tests.sh
 
 success
