@@ -45,9 +45,8 @@ import (
 
 const (
 	// TopicPrefix is the Kafka Broker topic prefix - (topic name: knative-broker-<broker-namespace>-<broker-name>).
-	TopicPrefix = "knative-broker-"
+	TopicPrefix     = "knative-broker-"
 	topicAnnotation = "kafka.eventing.knative.dev/broker.topic"
-
 )
 
 type Configs struct {
