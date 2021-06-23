@@ -215,11 +215,16 @@ func (r *Reconciler) reconcileKind(ctx context.Context, broker *eventing.Broker)
 
 func resolveTopicName(broker *eventing.Broker) string {
 	topicName := kafka.Topic(TopicPrefix, broker)
-	topicAnnotationValue, ok := broker.Annotations[topicAnnotation]
+	topicAnnotationValue, ok := isCustomTopic(broker)
 	if ok {
 		topicName = topicAnnotationValue
 	}
 	return topicName
+}
+
+func isCustomTopic(broker *eventing.Broker) (string, bool) {
+	topicAnnotationValue, ok := broker.Annotations[topicAnnotation]
+	return topicAnnotationValue, ok
 }
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, broker *eventing.Broker) reconciler.Event {
@@ -295,12 +300,15 @@ func (r *Reconciler) finalizeKind(ctx context.Context, broker *eventing.Broker) 
 		return fmt.Errorf("failed to create security (auth) option: %w", err)
 	}
 
-	topic, err := r.ClusterAdmin.DeleteTopic(kafka.Topic(TopicPrefix, broker), topicConfig.BootstrapServers, securityOption)
-	if err != nil {
-		return err
+	// we should not delete custom topics.
+	_, ok := isCustomTopic(broker)
+	if !ok {
+		topic, err := r.ClusterAdmin.DeleteTopic(kafka.Topic(TopicPrefix, broker), topicConfig.BootstrapServers, securityOption)
+		if err != nil {
+			return err
+		}
+		logger.Debug("Topic deleted", zap.String("topic", topic))
 	}
-
-	logger.Debug("Topic deleted", zap.String("topic", topic))
 
 	return nil
 }
